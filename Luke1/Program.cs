@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reactive.Linq;
@@ -10,62 +9,36 @@ namespace Luke1
     {
         static void Main(string[] args)
         {
-            new Luke1().Run();
+            var sum = new Test().Run();
+            Console.WriteLine(sum);
+
+            //using (new Luke1().Sum().Subscribe(Console.WriteLine)) { }
 
             Console.ReadLine();
         }
     }
     public class Luke1
     {
-        public void Run()
+        public IObservable<long> Sum()
         {
             var data = GetData();
 
-            var obs = Observable.Return(data);
-
-            var obs2 = obs
+            return Observable.Return(data)
                 .SelectMany(x => x.Split('\n'))
-                .Select(x =>
-                {
-                    var success = int.TryParse(x, out var tall);
-                    return new { isTall = success, tall };
-                })
-                .Where(x => x.isTall)
-                .Select(x => x.tall)
-                .Scan(
-                    new Stack<int>(new List<int> { 0 }),
-                    (stack, current) =>
-                    {
-                        if (stack.Peek() < current)
-                            stack.Push(current);
-
-                        return stack;
-                    }
-                )
-                .DistinctUntilChanged(x => x.Count)
-                .Select(x => x.Peek());
-
-
-
-            var annet = obs2.Subscribe(x =>
-            {
-                Console.WriteLine(x);
-            });
+                .Select(x => long.TryParse(x, out var integer) ? (long?)integer : null)
+                .Where(x => x.HasValue)
+                .Select(x => x.Value)
+                .Scan(0L, Math.Max)
+                .DistinctUntilChanged()
+                .Sum();
         }
 
-        public string GetData()
+        private string GetData()
         {
             using (var client = new WebClient())
             {
-                string url = "https://s3-eu-west-1.amazonaws.com/knowit-julekalender-2018/input-vekksort.txt";
-                string content = client.DownloadString(url);
-                //Console.WriteLine(content);
-
-                var noe = content.Contains("\n");
-
-                return content;
+                return client.DownloadString("https://s3-eu-west-1.amazonaws.com/knowit-julekalender-2018/input-vekksort.txt");
             }
         }
     }
-
 }
